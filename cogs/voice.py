@@ -8,7 +8,8 @@ ytdl_opts = {
     "format": "bestaudio/best",
     "outtmpl": "downloads/%(title)s.%(ext)s",
     "restrictfilenames": True,
-    "js-runtimes": "deno",
+    "noplaylist": True,
+    "js_runtimes": {"deno": {}},
     "remote-components": "ejs:github",
     "quiet": True,
     "nowarnings": True,
@@ -55,6 +56,10 @@ class Music(commands.Cog):
 
     @commands.command(name="play")
     async def play(self, ctx, url):
+        print(f"url: {url}")
+        if not url and ctx.voice_client and ctx.voice_client.is_paused():
+            ctx.voice_client.resume()
+
         async with ctx.typing():
             player = await YTDLSource.from_url(url, loop=self.bot.loop, stream=True)
             ctx.voice_client.play(
@@ -65,25 +70,34 @@ class Music(commands.Cog):
 
     @commands.command(name="pause")
     async def pause(self, ctx):
-        # Add your pause music logic here
-        pass
+        if ctx.voice_client and ctx.voice_client.is_playing():
+            ctx.voice_client.pause()
+            await ctx.send(f":pause_button: Stopped playback (by {ctx.author})")
 
     @commands.command(name="resume")
     async def resume(self, ctx):
-        # Add your resume music logic here
-        pass
+        if ctx.voice_client and ctx.voice_client.is_paused():
+            ctx.voice_client.resume()
+            await ctx.send(f":arrow_forward: Resumed playback (by {ctx.author})")
+        else:
+            await ctx.send("Excuse me. There's nothing to unpause.")
 
-    @commands.command(name="stop")
-    async def stop(self, ctx):
-        """Stops and clears queue"""
-        # Add your stop music logic here
+    @commands.command(name="stop", description="Stops the music and clears the queue")
+    async def stop(self, ctx, self_request=False):
+        if ctx.voice_client and ctx.voice_client.is_playing():
+            ctx.voice_client.stop()
+        if not self_request:
+            await ctx.send(f"Stopped playback (by {ctx.author})")
 
     @commands.command(name="leave")
     async def leave(self, ctx):
-        """Leaves the channel"""
-        await ctx.voice_client.disconnect()
+        if ctx.voice_client:
+            await self.stop(ctx, self_request=True)
+            await ctx.voice_client.disconnect()
+            await ctx.send(f"Stopped playback and left the channel (by {ctx.author})")
 
     @play.before_invoke
+    @join.before_invoke
     async def ensure_voice(self, ctx):
         if ctx.voice_client is None:
             if ctx.author.voice:
