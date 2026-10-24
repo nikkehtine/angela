@@ -1,7 +1,7 @@
 import os
-import random
 
 import discord
+from discord.ext import commands
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,48 +10,28 @@ TOKEN = os.getenv("DISCORD_BOT_TOKEN") or ""
 intents = discord.Intents.default()
 intents.message_content = True
 
-client = discord.Client(intents=intents)
+
+class MyBot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix="$", intents=intents)
+
+    async def setup_hook(self):
+        for filename in os.listdir("./cogs"):
+            if filename.endswith(".py") and not (filename.startswith("_")):
+                await self.load_extension(f"cogs.{filename[:-3]}")
+        await self.tree.sync()
+
+    async def on_ready(self):
+        print(f"Logged in as {self.user}")
+
+    async def on_message(self, message):
+        if message.author == self.user:
+            return
 
 
-def match_response(msg: str) -> str | None:
-    msg = msg.lower()
-    match msg:
-        case "ping":
-            return "Pong!"
-        case "sus":
-            return "Amongus"
-        case "amongus" | "amogus":
-            return "Sus"
-        case (
-            "oh shit i'm sorry"
-            | "oh shit, i'm sorry"
-            | "oh shit im sorry"
-            | "oh shit, im sorry"
-        ):
-            return "Sorry for what?"
-        case _:
-            return None
+bot = MyBot()
 
-
-@client.event
-async def on_ready():
-    print(f"Logged in as {client.user}")
-
-
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return
-
-    funny_response = match_response(message.content)
-    if funny_response:
-        await message.channel.send(funny_response)
-
-    if message.content.lower().startswith(
-        "hello"
-    ) or message.content.lower().startswith("hi"):
-        hello = random.choice(["Hi", "Hello"])
-        await message.channel.send(hello)
-
-
-client.run(TOKEN)
+if TOKEN == "":
+    print("DISCORD_BOT_TOKEN is empty")
+else:
+    bot.run(TOKEN)
