@@ -22,11 +22,7 @@ class MyBot(commands.Bot):
         await self.tree.sync()
 
     async def on_ready(self):
-        print(f"Logged in as {self.user}")
-
-    async def on_message(self, message):
-        if message.author == self.user:
-            return
+        print(f"Logged in as {self.user} (ID: {self.user.id})")
 
 
 bot = MyBot()
